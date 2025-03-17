@@ -1,18 +1,18 @@
 #!/bin/bash
 set -e
 
+# This was done in a "move fast and break things" manner and should to be optimized in future releases but it works
+
 # install postgres
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/London
 
-sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 apt update
-apt install -y gnupg lsb-release wget sudo 
+apt install -y gnupg lsb-release wget sudo
 
 sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
 
-sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 apt update
 apt install -y postgresql-17
 pg_ctlcluster 17 main start
@@ -142,6 +142,34 @@ psql-account-operations-threads-number = 2
 psql-enable-account-operations-dump = true
 psql-force-open-inconsistent = false
 psql-livesync-threshold = 100000
+psql-track-operations=transfer_operation
+psql-track-operations=claim_reward_balance_operation
+psql-track-operations=transfer_to_savings_operation
+psql-track-operations=collateralized_convert_operation
+psql-track-operations=convert_operation
+psql-track-operations=limit_order_create_operation
+psql-track-operations=limit_order_create2_operation
+psql-track-operations=transfer_to_vesting_operation
+psql-track-operations=account_create_operation
+psql-track-operations=account_create_with_delegation_operation
+psql-track-operations=escrow_transfer_operation
+psql-track-operations=escrow_release_operation
+psql-track-operations=fill_recurrent_transfer_operation
+psql-track-operations=fill_transfer_from_savings_operation
+psql-track-operations=interest_operation
+psql-track-operations=fill_convert_request_operation
+psql-track-operations=limit_order_cancelled_operation
+psql-track-operations=fill_order_operation
+psql-track-operations=fill_collateralized_convert_request_operation
+psql-track-operations=collateralized_convert_immediate_conversion_operation
+psql-track-operations=fill_vesting_withdraw_operation
+psql-track-operations=liquidity_reward_operation
+psql-track-operations=escrow_approved_operation
+psql-track-operations=escrow_rejected_operation
+psql-track-operations=proposal_fee_operation
+psql-track-operations=proposal_pay_operation
+psql-track-operations=hardfork_hive_operation
+psql-track-operations=hardfork_hive_restore_operation
 EOF
 
 # restart postgres ahead of sync
@@ -160,7 +188,7 @@ export NVM_DIR="$HOME/.nvm"
 nvm install 22
 npm install -g pm2
 
-pm2 start "/haf/build/hive/programs/hived/hived --stop-at-block 500000 --psql-index-threshold 65432" --name hived
+pm2 start "/haf/build/hive/programs/hived/hived" --name hived
 
 cd /tmp
 wget https://github.com/PostgREST/postgrest/releases/download/v12.2.8/postgrest-v12.2.8-linux-static-x86-64.tar.xz
@@ -298,6 +326,6 @@ cd /
 git clone https://gitlab.syncad.com/hive/mesh-api.git
 cd mesh-api
 npm i
-pm2 start "src/app.ts" --name mesh
+pm2 start "src/app.js" --name mesh
 
 

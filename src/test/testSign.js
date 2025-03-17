@@ -15,10 +15,7 @@ import fs from 'fs';
 async function signTransaction(unsignedTransactionHex, privateKeyWif) {
     try {
         console.log("Initializing Hive chain...");
-        const chain = await createHiveChain({
-            apiEndpoint: "http://127.0.0.1:4000",
-            restApiEndpoint: "http://127.0.0.1:4000"
-        });
+        const chain = await createHiveChain();
         console.log("Chain initialized successfully.");
 
         console.log("Initializing beekeeper...");
@@ -34,7 +31,6 @@ async function signTransaction(unsignedTransactionHex, privateKeyWif) {
 
         console.log("Creating transaction object...");
         const transaction = await chain.createTransactionFromJson(txObject);
-        // const transaction = await chain.createTransactionFromJson({"ref_block_num":17359,"ref_block_prefix":1488146379,"expiration":"2025-03-10T04:07:32","operations":[{"type":"transfer_operation","value":{"from":"howo","to":"howo","amount":"1.000 HBD","memo":""}}],"extensions":[]});
         transaction.validate();
 
         const session = beekeeper.createSession("tempsalt");
@@ -55,11 +51,11 @@ async function signTransaction(unsignedTransactionHex, privateKeyWif) {
         const signature = convertedTx.signatures[0];
         console.log(`Generated signature: ${signature}`);
 
-        // Convert signed transaction to hex for Rosetta API
+        // Convert signed transaction to hex for Mesh API
         const signedTxHex = Buffer.from(JSON.stringify(convertedTx)).toString('hex');
 
-        // Prepare response object in Rosetta format
-        const rosettaResponse = {
+        // Prepare response object in Mesh format
+        const meshResponse = {
             signature: {
                 signing_payload: {
                     account_identifier: {
@@ -78,10 +74,10 @@ async function signTransaction(unsignedTransactionHex, privateKeyWif) {
             signed_transaction: signedTxHex
         };
 
-        fs.writeFileSync('signed_transaction_result.json', JSON.stringify(rosettaResponse, null, 2));
+        fs.writeFileSync('signed_transaction_result.json', JSON.stringify(meshResponse, null, 2));
         console.log("Results saved to signed_transaction_result.json");
 
-        return rosettaResponse;
+        return meshResponse;
     } catch (error) {
         console.error("Error signing transaction:", error);
         throw error;
@@ -90,7 +86,7 @@ async function signTransaction(unsignedTransactionHex, privateKeyWif) {
 
 async function main() {
     try {
-        // Transaction from Rosetta /payloads endpoint
+        // Transaction from Mesh /payloads endpoint
         const unsignedTransactionHex = "7b227265665f626c6f636b5f6e756d223a31373335392c227265665f626c6f636b5f707265666978223a313438383134363337392c2265787069726174696f6e223a22323032352d30332d31305430343a35343a3331222c226f7065726174696f6e73223a5b7b2274797065223a227472616e736665725f6f7065726174696f6e222c2276616c7565223a7b2266726f6d223a22686f776f222c22746f223a22686f776f222c22616d6f756e74223a7b22616d6f756e74223a2231303030222c22707265636973696f6e223a332c226e6169223a224040303030303030303133227d2c226d656d6f223a22227d7d5d2c22657874656e73696f6e73223a5b5d7d";
 
         // Test private key - REPLACE THIS WITH YOUR TEST KEY
@@ -101,7 +97,7 @@ async function main() {
         const result = await signTransaction(unsignedTransactionHex, privateKey);
 
         console.log("Transaction signing completed successfully!");
-        console.log("\nTo use with Rosetta /combine endpoint:");
+        console.log("\nTo use with Mesh /combine endpoint:");
         console.log(JSON.stringify({
             network_identifier: {
                 blockchain: "hive",
@@ -111,7 +107,7 @@ async function main() {
             signatures: [result.signature]
         }, null, 2));
 
-        console.log("\nTo use with Rosetta /parse endpoint (signed transaction):");
+        console.log("\nTo use with Mesh /parse endpoint (signed transaction):");
         console.log(JSON.stringify({
             network_identifier: {
                 blockchain: "hive",

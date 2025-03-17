@@ -3,8 +3,8 @@ import {createHiveChain} from "@hiveio/wax";
 import bodyParser from 'body-parser';
 const urlencodedParser = bodyParser.urlencoded({extended: false});
 
-import { processOperations, isOperationSupported } from './opsProcessor.ts';
-import { processVirtualOperations } from './virtualOpsProcessor.ts';
+import { processOperations, isOperationSupported } from './opsProcessor.js';
+import { processVirtualOperations } from './virtualOpsProcessor.js';
 
 const router = express.Router();
 
@@ -24,7 +24,6 @@ function transactionsProcessor(block) {
                 continue;
             }
 
-            // Pass the globalOpIndex and get the updated index after processing
             const operationResult = processOperations(op, txId, globalOpIndex, transactionsResult);
             globalOpIndex = operationResult.nextIndex;
         }
@@ -100,9 +99,7 @@ router.post('/', urlencodedParser, async function(req, res) {
             restApiEndpoint: "http://127.0.0.1:4000"
         });
 
-        // Get block and virtual operations
         let blockResponse = await chain.api.block_api.get_block({ block_num: blockIndex });
-
         if (!blockResponse || !blockResponse.block) {
             return res.status(404).json({
                 code: 12,
@@ -119,13 +116,8 @@ router.post('/', urlencodedParser, async function(req, res) {
 
         const block = blockResponse.block;
 
-        // Process regular transactions and get the next index to use
         const { transactionsResult, nextIndex } = transactionsProcessor(block);
-
-        // Process virtual operations starting from the next index
         const virtualTransactionsResult = processVirtualOperations(virtualOpsResponse, nextIndex);
-
-        // Combine regular and virtual transactions
         const allTransactions = [...transactionsResult, ...virtualTransactionsResult];
 
         res.json({
@@ -157,7 +149,6 @@ router.post('/', urlencodedParser, async function(req, res) {
 
 // BlockTransaction: https://docs.cdp.coinbase.com/mesh/reference/blocktransaction
 router.post('/transaction', urlencodedParser, async function(req, res) {
-    // Validate request body
     if (!req.body || !req.body.block_identifier || !req.body.transaction_identifier) {
         return res.status(400).json({
             code: 11,
@@ -167,7 +158,6 @@ router.post('/transaction', urlencodedParser, async function(req, res) {
         });
     }
 
-    // Validate transaction identifier
     if (!req.body.transaction_identifier.hash) {
         return res.status(400).json({
             code: 11,
@@ -209,23 +199,14 @@ router.post('/transaction', urlencodedParser, async function(req, res) {
 
         const block = blockResponse.block;
 
-        // Process the entire block to get correct operation indices
         const { transactionsResult } = transactionsProcessor(block);
-
-        // Process all virtual operations
         const virtualOpsResponse = await chain.api.account_history_api.get_ops_in_block({
             block_num: blockIndex,
             only_virtual: true
         });
 
-        // Use the next index after regular operations
-        const virtualTransactions = processVirtualOperations(virtualOpsResponse,
-            transactionsResult.reduce((count, tx) => count + tx.operations.length, 0));
-
-        // Combine all transactions
+        const virtualTransactions = processVirtualOperations(virtualOpsResponse, transactionsResult.reduce((count, tx) => count + tx.operations.length, 0));
         const allTransactions = [...transactionsResult, ...virtualTransactions];
-
-        // Filter transactions by the requested transaction ID
         const matchingTransactions = allTransactions.filter(tx =>
             tx.transaction_identifier.hash === transactionId
         );
@@ -239,13 +220,11 @@ router.post('/transaction', urlencodedParser, async function(req, res) {
             });
         }
 
-        // Gather all operations from transactions with the same hash
         let allOperations = [];
         matchingTransactions.forEach(tx => {
             allOperations = allOperations.concat(tx.operations);
         });
 
-        // Return a combined transaction with all operations
         return res.json({
             "transaction": {
                 "transaction_identifier": {

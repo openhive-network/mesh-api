@@ -1,9 +1,9 @@
 import express from 'express';
-import networkRouter from './network.ts';
-import accountRouter from './account.ts';
-import blockRouter from './block.ts';
-import mempoolRouter from './mempool.ts';
-import constructionRouter from './construction.ts';
+import networkRouter from './network.js';
+import accountRouter from './account.js';
+import blockRouter from './block.js';
+import mempoolRouter from './mempool.js';
+import constructionRouter from './construction.js';
 let app = express();
 app.use(express.json());
 
@@ -38,5 +38,5 @@ app.use((err, req, res, next) => {
 // Start the server
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => {
-    console.log(`Hive Rosetta API server running on port ${PORT}`);
+    console.log(`Hive Mesh API server running on port ${PORT}`);
 });

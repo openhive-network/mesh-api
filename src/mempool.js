@@ -30,4 +30,4 @@ router.post('/transaction', urlencodedParser, async function(req,res) {
     )
 });
 
-module.exports = router;
+export default router;

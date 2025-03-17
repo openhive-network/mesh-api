@@ -47,7 +47,6 @@ router.post('/balance', urlencodedParser, async function(req, res) {
 
         const acc = accountData.accounts[0];
 
-        // Prepare balances based on requested currencies
         let balances = [];
 
         if (currencies.length === 0 || currencies.some(c => c.symbol === 'HBD')) {
@@ -106,5 +105,5 @@ router.post('/coins', urlencodedParser, async function(req,res) {
     )
 });
 
-module.exports = router;
+export default router;
 

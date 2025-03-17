@@ -1,23 +1,11 @@
 {
-  "name": "rosetta",
+  "name": "mesh",
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node --loader ts-node/esm src/app.ts"
-  },
   "dependencies": {
     "@hiveio/wax": "^1.27.6-rc6",
     "express": "^4.21.1",
     "node-fetch": "^3.3.2"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/node": "^20.10.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
-  },
-  "private": true
+  }
 }

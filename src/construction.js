@@ -21,7 +21,6 @@ router.post('/derive', urlencodedParser, async function(req,res) {
 
 // https://docs.cdp.coinbase.com/mesh/reference/constructionpreprocess
 router.post('/preprocess', urlencodedParser, async function(req, res) {
-    // Validate required parameters
     if (!req.body || !req.body.network_identifier || !req.body.operations) {
         return res.status(400).json({
             code: 11,
@@ -33,7 +32,6 @@ router.post('/preprocess', urlencodedParser, async function(req, res) {
 
     const { network_identifier, operations, metadata } = req.body;
 
-    // Validate blockchain
     if (!network_identifier.blockchain || network_identifier.blockchain.toLowerCase() !== 'hive') {
         return res.status(400).json({
             code: 1,
@@ -43,7 +41,6 @@ router.post('/preprocess', urlencodedParser, async function(req, res) {
         });
     }
 
-    // Validate operations are transfer_operation type
     for (let i = 0; i < operations.length; i++) {
         if (operations[i].type !== "transfer_operation") {
             return res.status(400).json({
@@ -123,7 +120,6 @@ router.post('/preprocess', urlencodedParser, async function(req, res) {
 
 // https://docs.cdp.coinbase.com/mesh/reference/constructionmetadata
 router.post('/metadata', urlencodedParser, async function(req, res) {
-    // Validate required parameters
     if (!req.body || !req.body.network_identifier || !req.body.options) {
         return res.status(400).json({
             code: 11,
@@ -134,8 +130,6 @@ router.post('/metadata', urlencodedParser, async function(req, res) {
     }
 
     const { network_identifier, options } = req.body;
-
-    // Validate blockchain
     if (!network_identifier.blockchain || network_identifier.blockchain.toLowerCase() !== 'hive') {
         return res.status(400).json({
             code: 1,
@@ -213,7 +207,6 @@ router.post('/metadata', urlencodedParser, async function(req, res) {
 });
 
 router.post('/payloads', urlencodedParser, async function(req, res) {
-    // Validate required parameters
     if (!req.body || !req.body.network_identifier || !req.body.operations || !req.body.metadata) {
         return res.status(400).json({
             code: 11,
@@ -225,7 +218,6 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
 
     const { network_identifier, operations, metadata } = req.body;
 
-    // Validate blockchain
     if (!network_identifier.blockchain || network_identifier.blockchain.toLowerCase() !== 'hive') {
         return res.status(400).json({
             code: 1,
@@ -241,7 +233,6 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
             restApiEndpoint: "http://127.0.0.1:4000"
         });
 
-        // Verify chain ID if network is specified
         if (network_identifier.network) {
             const expectedNetwork = chain.chainId;
             if (network_identifier.network !== expectedNetwork) {
@@ -368,7 +359,6 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
             });
         }
 
-        // Add transfer operations to the transaction
         for (const transfer of transfers) {
             transaction.operations.push(
                 {
@@ -384,10 +374,7 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
             );
         }
 
-        // Convert transaction to JSON string
         const serializedTx = JSON.stringify(transaction);
-
-        // Create signing payloads for each sender account
         const payloads = [];
         const accountKeys = metadata.account_keys || {};
 
@@ -401,11 +388,8 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
                 });
             }
 
-            // In Hive, we typically use the first active key for signing
-            const publicKey = accountKeys[sender].active_keys[0];
-
             // The bytes to sign would typically be a digest of the transaction
-            // For Rosetta API compatibility, we're including the serialized transaction itself
+            // For Mesh API compatibility, we're including the serialized transaction itself
             // In a real implementation, you would use the chain.signDigest method
             payloads.push({
                 account_identifier: {
@@ -435,7 +419,6 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
 
 // https://docs.cdp.coinbase.com/mesh/reference/constructionparse
 router.post('/parse', urlencodedParser, async function(req, res) {
-    // Validate required parameters
     if (!req.body || !req.body.network_identifier || !req.body.transaction) {
         return res.status(400).json({
             code: 11,
@@ -448,7 +431,6 @@ router.post('/parse', urlencodedParser, async function(req, res) {
     const { network_identifier, transaction, signed } = req.body;
     const isSignedTx = signed === true;
 
-    // Validate blockchain
     if (!network_identifier.blockchain || network_identifier.blockchain.toLowerCase() !== 'hive') {
         return res.status(400).json({
             code: 1,
@@ -462,9 +444,8 @@ router.post('/parse', urlencodedParser, async function(req, res) {
         const chain = await createHiveChain({
             apiEndpoint: "http://127.0.0.1:4000",
             restApiEndpoint: "http://127.0.0.1:4000"
-});
+        });
 
-        // Verify chain ID if network is specified
         if (network_identifier.network) {
             const expectedNetwork = chain.chainId;
             if (network_identifier.network !== expectedNetwork) {
@@ -477,7 +458,6 @@ router.post('/parse', urlencodedParser, async function(req, res) {
             }
         }
 
-        // Parse the transaction from hex
         let txObject;
         try {
             const txBuffer = Buffer.from(transaction, 'hex');
@@ -501,7 +481,6 @@ router.post('/parse', urlencodedParser, async function(req, res) {
             });
         }
 
-        // Validate transaction structure
         if (!txObject || !txObject.operations || !Array.isArray(txObject.operations)) {
             return res.status(400).json({
                 code: 9,
@@ -511,14 +490,12 @@ router.post('/parse', urlencodedParser, async function(req, res) {
             });
         }
 
-        // Parse the operations into Rosetta format
         const operations = [];
         const accountIdentifierSigners = [];
 
         for (let i = 0; i < txObject.operations.length; i++) {
             const op = txObject.operations[i];
 
-            // Check if operation is in the expected format
             if (!op.type || !op.value) {
                 return res.status(400).json({
                     code: 9,
@@ -555,7 +532,6 @@ router.post('/parse', urlencodedParser, async function(req, res) {
             let value, currency;
             if (typeof opData.amount === 'object' && opData.amount.amount && opData.amount.nai) {
                 value = opData.amount.amount;
-                // Convert NAI to currency symbol
                 switch (opData.amount.nai) {
                     case '@@000000021':
                         currency = 'HIVE';
@@ -631,9 +607,7 @@ router.post('/parse', urlencodedParser, async function(req, res) {
                 }
             });
 
-            // Add memo if present
             if (opData.memo) {
-                // Add memo to the last operation's metadata
                 operations[operations.length - 1].metadata = {
                     memo: opData.memo
                 };
@@ -667,7 +641,6 @@ router.post('/parse', urlencodedParser, async function(req, res) {
 
 // https://docs.cdp.coinbase.com/mesh/reference/constructioncombine
 router.post('/combine', urlencodedParser, async function(req, res) {
-    // Validate required parameters
     if (!req.body || !req.body.network_identifier || !req.body.unsigned_transaction || !req.body.signatures) {
         return res.status(400).json({
             code: 11,
@@ -679,7 +652,6 @@ router.post('/combine', urlencodedParser, async function(req, res) {
 
     const { network_identifier, unsigned_transaction, signatures } = req.body;
 
-    // Validate blockchain
     if (!network_identifier.blockchain || network_identifier.blockchain.toLowerCase() !== 'hive') {
         return res.status(400).json({
             code: 1,
@@ -693,9 +665,8 @@ router.post('/combine', urlencodedParser, async function(req, res) {
         const chain = await createHiveChain({
             apiEndpoint: "http://127.0.0.1:4000",
             restApiEndpoint: "http://127.0.0.1:4000"
-});
+        });
 
-        // Verify chain ID if network is specified
         if (network_identifier.network) {
             const expectedNetwork = chain.chainId;
             if (network_identifier.network !== expectedNetwork) {
@@ -798,9 +769,8 @@ router.post('/hash', urlencodedParser, async function(req, res) {
         const chain = await createHiveChain({
             apiEndpoint: "http://127.0.0.1:4000",
             restApiEndpoint: "http://127.0.0.1:4000"
-});
+        });
 
-        // Verify chain ID if network is specified
         if (network_identifier.network) {
             const expectedNetwork = chain.chainId;
             if (network_identifier.network !== expectedNetwork) {
@@ -862,7 +832,7 @@ router.post('/submit', urlencodedParser, async function(req, res) {
         const chain = await createHiveChain({
             apiEndpoint: "http://127.0.0.1:4000",
             restApiEndpoint: "http://127.0.0.1:4000"
-});
+        });
 
         // Verify chain ID if network is specified
         if (network_identifier.network) {
@@ -902,5 +872,4 @@ router.post('/submit', urlencodedParser, async function(req, res) {
     }
 });
 
-module.exports = router;
-
+export default router;

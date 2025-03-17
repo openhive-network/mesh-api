@@ -2,8 +2,6 @@ services:
   mesh:
     image: ubuntu:24.04
     container_name: mesh
-    networks:
-      - haf-network
     ports:
       - "4001:4001"
     volumes:
@@ -12,8 +10,3 @@ services:
     tty: true
     stdin_open: true
     restart: unless-stopped
-    hostname: haf-postgres-container  # This hostname will be used by other services
-
-networks:
-  haf-network:
-    external: true

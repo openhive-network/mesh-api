@@ -19,7 +19,6 @@ router.post('/list', async function(req,res) {
 
 router.post('/status', async function(req, res) {
     try {
-        // Validate required parameters
         const { network_identifier } = req.body || {};
         if (!network_identifier) {
             return res.status(400).json({ code: 400, message: "Missing network_identifier", retriable: false });
@@ -27,7 +26,6 @@ router.post('/status', async function(req, res) {
 
         const { blockchain, network } = network_identifier;
 
-        // Check blockchain and network values
         if (!blockchain || blockchain.toLowerCase() !== "hive") {
             return res.status(400).json({ code: 400, message: "Unsupported blockchain: must be 'hive'", retriable: false });
         }
@@ -48,7 +46,6 @@ router.post('/status', async function(req, res) {
             chain.api.network_node_api.get_connected_peers()
         ]);
 
-        // Format peer list for Rosetta API
         const peers = peerInfo.connected_peers.map(peer => ({
             peer_id: peer.host
         }));
@@ -78,7 +75,6 @@ router.post('/status', async function(req, res) {
     } catch (error) {
         console.error("Status endpoint error:", error);
 
-        // Check if the error is specifically related to the network_node_api
         if (error.message && error.message.includes('network_node_api')) {
             console.warn("network_node_api may not be enabled on this node. Falling back to current witness only.");
 
@@ -132,7 +128,6 @@ router.post('/options', async function(req, res) {
         });
         const expectedNetwork = chain.chainId;
 
-        // Validate network identifier if provided
         if (req.body && req.body.network_identifier) {
             const { blockchain, network } = req.body.network_identifier;
 
@@ -155,11 +150,10 @@ router.post('/options', async function(req, res) {
             }
         }
 
-        // Return the network options for Hive blockchain
         res.json({
             "version": {
-                "rosetta_version": "1.4.10",
-                "node_version": "1.27.8", // TODO: fetch it from node, hardcoded is fine because it's tied to the underlying docker file for now anyways
+                "mesh_version": "1.4.10",
+                "node_version": "1.27.10", // TODO: fetch it from node, hardcoded is fine because it's tied to the underlying docker file anyways
                 "middleware_version": "1.0.0",
                 "metadata": {
                     "blockchain": "Hive",
@@ -174,7 +168,7 @@ router.post('/options', async function(req, res) {
                     }
                 ],
                 "operation_types": [
-                    // Regular operations (from opsProcessor.ts)
+                    // Regular operations (from opsProcessor.js)
                     "transfer_operation",
                     "claim_reward_balance_operation",
                     "transfer_to_savings_operation",
@@ -188,7 +182,7 @@ router.post('/options', async function(req, res) {
                     "escrow_transfer_operation",
                     "escrow_release_operation",
 
-                    // Virtual operations (from virtualOpsProcessor.ts)
+                    // Virtual operations (from virtualOpsProcessor.js)
                     "fill_recurrent_transfer_operation",
                     "fill_transfer_from_savings_operation",
                     "interest_operation",
@@ -291,5 +285,5 @@ router.post('/options', async function(req, res) {
     }
 });
 
-module.exports = router;
+export default router;
 

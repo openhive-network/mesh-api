@@ -105,11 +105,11 @@ The API supports the following Hive operations for tracking balance changes:
 
 ### API Server Configuration
 
-The API server configuration is defined in `src/app.ts`. By default, it runs on port 4001, which can be changed using the `PORT` environment variable.
+The API server configuration is defined in `src/app.js`. By default, it runs on port 4001, which can be changed using the `PORT` environment variable.
 
 ## Transaction Construction and Signing
 
-For testing transaction construction and signing, you can use the provided script in `src/test/testSign.ts`. This script demonstrates how to:
+For testing transaction construction and signing, you can use the provided script in `src/test/testSign.js`. This script demonstrates how to:
 
 1. Create an unsigned transaction
 2. Sign it with a private key
