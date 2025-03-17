@@ -27,7 +27,7 @@ This will:
 - Build HiveD and HAF
 - Run HAfAH and run it
 - Run Drone
-- Run the mesh api and expose it outside of the docker on port 4001
+- Run the mesh api and expose it on port 4001
 
 ## API Endpoints
 
