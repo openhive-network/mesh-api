@@ -170,7 +170,7 @@ mv postgrest /usr/bin/
 cd /
 git clone https://gitlab.syncad.com/hive/HAfAH.git
 cd HAfAH/
-git submodule update --init --recursive # TODO: this installs haf, we don't need to install haf individually then we could do everything from this
+git submodule update --init --recursive # TODO: this installs haf, we don't need to install haf individually then we should do everything from this
 cd scripts
 ./setup_postgres.sh --host=127.0.0.1
 ./generate_version_sql.bash ..
@@ -200,7 +200,7 @@ drone:
   port: 4000
   hostname: 0.0.0.0
   cache_max_capacity: 4294967296 # 4GB
-  operator_message: "Drone by Deathwing"
+  operator_message: "Drone"
   middleware_connection_threads: 8
 # The remainder of this file is based on the information in existing jussi config files,
 # just in a more concise yaml format.
@@ -293,3 +293,11 @@ equivalent_methods:
 EOF
 
 pm2 start "./target/release/drone" --name drone
+
+cd /
+git clone https://gitlab.syncad.com/hive/mesh-api.git
+cd mesh-api
+npm i
+pm2 start "src/app.ts" --name mesh
+
+
