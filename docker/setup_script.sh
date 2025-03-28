@@ -44,9 +44,13 @@ pg_ctlcluster 17 main restart
 apt install git -y
 apt install software-properties-common -y
 
-git clone https://gitlab.syncad.com/hive/haf.git && cd haf && git checkout 1.27.10
+#git clone https://gitlab.syncad.com/hive/haf.git && cd haf && git checkout 1.27.10
 
+git clone https://gitlab.syncad.com/hive/HAfAH.git
+cd HAfAH/
+git checkout 1.27.10
 git submodule update --init --recursive
+
 add-apt-repository universe -y
 apt-get update && apt-get install -y \
 git python3 build-essential gir1.2-glib-2.0 libgirepository-1.0-1 libglib2.0-0 libglib2.0-data libxml2 python3-setuptools python3-lib2to3 python3-pkg-resources shared-mime-info xdg-user-dirs ca-certificates autoconf automake cmake clang clang-tidy g++ git libbz2-dev libsnappy-dev libssl-dev libtool make pkg-config python3-jinja2 doxygen libncurses-dev libreadline-dev perl ninja-build xxd liburing-dev screen python3-pip python3-dateutil tzdata python3-junit.xml python3-venv python3-dateutil python3-dev p7zip-full software-properties-common libpqxx-dev postgresql-server-dev-all zopfli acl
@@ -64,7 +68,7 @@ sudo ./b2 --with=all -j $cpuCores install
 sudo ldconfig
 pip3 install -U secp256k1prp --break-system-packages
 
-cd /haf
+cd /HAfAH/haf
 mkdir build && cd build
 
 cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/17/bin -DCMAKE_BUILD_TYPE=Release .. -GNinja
@@ -72,9 +76,9 @@ cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/17/bin -DCMAKE_BUILD_TYPE=
 ninja -j8
 ninja install
 
-sudo setfacl -R -m u:postgres:rwx /haf/
+sudo setfacl -R -m u:postgres:rwx /HAfAH//haf/
 cd ../scripts/
-./setup_postgres.sh --install-extension=yes,/haf/build
+./setup_postgres.sh --install-extension=yes,/HAfAH/haf/build
 ./setup_db.sh --haf-db-admin=postgres
 
 # config.ini
@@ -188,7 +192,7 @@ export NVM_DIR="$HOME/.nvm"
 nvm install 22
 npm install -g pm2
 
-pm2 start "/haf/build/hive/programs/hived/hived" --name hived
+pm2 start "/HAfAH/haf/build/hive/programs/hived/hived" --name hived
 
 cd /tmp
 wget https://github.com/PostgREST/postgrest/releases/download/v12.2.8/postgrest-v12.2.8-linux-static-x86-64.tar.xz
@@ -196,9 +200,7 @@ tar xf postgrest-v12.2.8-linux-static-x86-64.tar.xz
 mv postgrest /usr/bin/
 
 cd /
-git clone https://gitlab.syncad.com/hive/HAfAH.git
 cd HAfAH/
-git submodule update --init --recursive # TODO: this installs haf, we don't need to install haf individually then we should do everything from this
 cd scripts
 ./setup_postgres.sh --host=127.0.0.1
 ./generate_version_sql.bash ..
