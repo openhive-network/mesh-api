@@ -44,11 +44,9 @@ pg_ctlcluster 17 main restart
 apt install git -y
 apt install software-properties-common -y
 
-#git clone https://gitlab.syncad.com/hive/haf.git && cd haf && git checkout 1.27.10
-
 git clone https://gitlab.syncad.com/hive/HAfAH.git
 cd HAfAH/
-git checkout 1.27.10
+git checkout 1.27.12rc2
 git submodule update --init --recursive
 
 add-apt-repository universe -y
