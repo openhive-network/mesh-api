@@ -58,13 +58,13 @@ cd /tmp
 wget https://archives.boost.io/release/1.74.0/source/boost_1_74_0.tar.gz
 tar xf boost_1_74_0.tar.gz
 cd boost_1_74_0
-cpuCores=`cat /proc/cpuinfo | grep "cpu cores" | uniq | awk '{print $NF}'`
+cpuCores=$(cat /proc/cpuinfo | grep "cpu cores" | uniq | awk '{print $NF}')
 echo "Available CPU cores: "$cpuCores
 ./bootstrap.sh  # this will generate ./b2
-sudo ./b2 --with=all -j $cpuCores install
+sudo ./b2 --with-all -j $cpuCores install
 
 sudo ldconfig
-pip3 install -U secp256k1prp --break-system-packages
+pip3 install -U secp256k1prp
 
 cd /HAfAH/haf
 mkdir build && cd build
@@ -74,7 +74,7 @@ cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/17/bin -DCMAKE_BUILD_TYPE=
 ninja -j8
 ninja install
 
-sudo setfacl -R -m u:postgres:rwx /HAfAH//haf/
+sudo setfacl -R -m u:postgres:rwx /HAfAH/haf/
 cd ../scripts/
 ./setup_postgres.sh --install-extension=yes,/HAfAH/haf/build
 ./setup_db.sh --haf-db-admin=postgres
@@ -197,9 +197,7 @@ wget https://github.com/PostgREST/postgrest/releases/download/v12.2.8/postgrest-
 tar xf postgrest-v12.2.8-linux-static-x86-64.tar.xz
 mv postgrest /usr/bin/
 
-cd /
-cd HAfAH/
-cd scripts
+cd /HAfAH/scripts
 ./setup_postgres.sh --host=127.0.0.1
 ./generate_version_sql.bash ..
 ./install_app.sh --host=127.0.0.1
