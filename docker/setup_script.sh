@@ -3,20 +3,57 @@ set -e
 
 # This was done in a "move fast and break things" manner and should to be optimized in future releases but it works
 
+# Helper functions
+error_exit() {
+    echo "ERROR: $1" >&2
+    exit 1
+}
+
+verify_checksum() {
+    local file="$1"
+    local expected_checksum="$2"
+    local algorithm="${3:-sha256}"
+
+    echo "Verifying checksum for $file..."
+    local actual_checksum
+    case "$algorithm" in
+        sha256)
+            actual_checksum=$(sha256sum "$file" | awk '{print $1}')
+            ;;
+        sha512)
+            actual_checksum=$(sha512sum "$file" | awk '{print $1}')
+            ;;
+        *)
+            error_exit "Unsupported checksum algorithm: $algorithm"
+            ;;
+    esac
+
+    if [ "$actual_checksum" != "$expected_checksum" ]; then
+        error_exit "Checksum verification failed for $file. Expected: $expected_checksum, Got: $actual_checksum"
+    fi
+    echo "Checksum verified successfully for $file"
+}
+
+check_command() {
+    if ! command -v "$1" &> /dev/null; then
+        error_exit "$1 is not installed or not in PATH"
+    fi
+}
+
 # install postgres
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/London
 
-apt update
-apt install -y gnupg lsb-release wget sudo
+apt update || error_exit "Failed to update package lists"
+apt install -y gnupg lsb-release wget sudo || error_exit "Failed to install base dependencies"
 
-sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' || error_exit "Failed to add PostgreSQL repository"
+wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg || error_exit "Failed to add PostgreSQL GPG key"
 
-apt update
-apt install -y postgresql-17
-pg_ctlcluster 17 main start
-sudo -i -u postgres psql -c 'alter role postgres password null;'
+apt update || error_exit "Failed to update apt packages"
+apt install -y postgresql-17 || error_exit "Failed to install PostgreSQL 17"
+pg_ctlcluster 17 main start || error_exit "Failed to start PostgreSQL cluster"
+sudo -i -u postgres psql -c 'alter role postgres password null;' || error_exit "Failed to configure postgres role"
 
 # Configure PostgreSQL to listen on all interfaces
 sudo -u postgres sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/17/main/postgresql.conf
@@ -38,16 +75,16 @@ host    replication     all             ::1/128                 trust
 # Allow connections from within the Docker network
 host    all             all             0.0.0.0/0               trust
 EOF'
-pg_ctlcluster 17 main restart
+pg_ctlcluster 17 main restart || error_exit "Failed to restart PostgreSQL cluster"
 
 # install the rest
 apt install git -y
 apt install software-properties-common -y
 
-git clone https://gitlab.syncad.com/hive/HAfAH.git
+git clone https://gitlab.syncad.com/hive/HAfAH.git || error_exit "Failed to clone HAfAH repository"
 cd HAfAH/
-git checkout 1.27.12rc2
-git submodule update --init --recursive
+git checkout 1.27.12rc2 || error_exit "Failed to checkout HAfAH version 1.27.12rc2"
+git submodule update --init --recursive || error_exit "Failed to update HAfAH submodules"
 
 add-apt-repository universe -y
 apt-get update && apt-get install -y \
@@ -55,32 +92,35 @@ git python3 build-essential gir1.2-glib-2.0 libgirepository-1.0-1 libglib2.0-0 l
 
 # build boost
 cd /tmp
-wget https://archives.boost.io/release/1.74.0/source/boost_1_74_0.tar.gz
-tar xf boost_1_74_0.tar.gz
+wget https://archives.boost.io/release/1.74.0/source/boost_1_74_0.tar.gz || error_exit "Failed to download boost"
+verify_checksum "boost_1_74_0.tar.gz" "afff36d392885120bcac079148c177d1f6f7730ec3d47233aa51b0afa4db94a5"
+tar xf boost_1_74_0.tar.gz || error_exit "Failed to extract boost archive"
 cd boost_1_74_0
 cpuCores=$(cat /proc/cpuinfo | grep "cpu cores" | uniq | awk '{print $NF}')
 echo "Available CPU cores: "$cpuCores
-./bootstrap.sh  # this will generate ./b2
-sudo ./b2 --with-all -j $cpuCores install
+./bootstrap.sh || error_exit "Failed to bootstrap boost"
+sudo ./b2 --with=all -j $cpuCores install || error_exit "Failed to build and install boost"
 
 sudo ldconfig
-pip3 install -U secp256k1prp
+pip3 install -U secp256k1prp --break-system-packages || error_exit "Failed to install secp256k1prp"
 
 cd /HAfAH/haf
-mkdir build && cd build
+mkdir build || error_exit "Failed to create build directory"
+cd build
 
-cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/17/bin -DCMAKE_BUILD_TYPE=Release .. -GNinja
+cmake -DPOSTGRES_INSTALLATION_DIR=/usr/lib/postgresql/17/bin -DCMAKE_BUILD_TYPE=Release .. -GNinja || error_exit "Failed to configure HAF with cmake"
 
-ninja -j8
-ninja install
+ninja -j8 || error_exit "Failed to build HAF with ninja"
+ninja install || error_exit "Failed to install HAF"
 
-sudo setfacl -R -m u:postgres:rwx /HAfAH/haf/
+sudo setfacl -R -m u:postgres:rwx /HAfAH/haf/ || error_exit "Failed to set permissions on HAF directory"
 cd ../scripts/
-./setup_postgres.sh --install-extension=yes,/HAfAH/haf/build
-./setup_db.sh --haf-db-admin=postgres
+./setup_postgres.sh --install-extension=yes,/HAfAH/haf/build || error_exit "Failed to setup PostgreSQL extensions"
+./setup_db.sh --haf-db-admin=postgres || error_exit "Failed to setup HAF database"
 
 # config.ini
-mkdir -p /root/.hived && cd /root/.hived
+mkdir -p /root/.hived || error_exit "Failed to create .hived directory"
+cd /root/.hived
 
 cat << 'EOF' > config.ini
 log-appender = {"appender":"stderr","stream":"std_error"}
@@ -175,32 +215,34 @@ psql-track-operations=hardfork_hive_restore_operation
 EOF
 
 # restart postgres ahead of sync
-pg_ctlcluster 17 main restart
+pg_ctlcluster 17 main restart || error_exit "Failed to restart PostgreSQL before sync"
 
 
 # install node
-wget  https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh
+wget https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh || error_exit "Failed to download NVM install script"
+verify_checksum "install.sh" "bdea8c52186c4dd12657e77e7515509cda5bf9fa5a2f0046bce749e62645076d"
 chmod +x install.sh
-./install.sh
+./install.sh || error_exit "Failed to install NVM"
 
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || error_exit "Failed to load nvm"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-nvm install 22
-npm install -g pm2
+nvm install 22 || error_exit "Failed to install Node.js 22"
+npm install -g pm2 || error_exit "Failed to install pm2"
 
-pm2 start "/HAfAH/haf/build/hive/programs/hived/hived" --name hived
+pm2 start "/HAfAH/haf/build/hive/programs/hived/hived" --name hived || error_exit "Failed to start hived with pm2"
 
 cd /tmp
-wget https://github.com/PostgREST/postgrest/releases/download/v12.2.8/postgrest-v12.2.8-linux-static-x86-64.tar.xz
-tar xf postgrest-v12.2.8-linux-static-x86-64.tar.xz
-mv postgrest /usr/bin/
+wget https://github.com/PostgREST/postgrest/releases/download/v12.2.8/postgrest-v12.2.8-linux-static-x86-64.tar.xz || error_exit "Failed to download PostgREST"
+verify_checksum "postgrest-v12.2.8-linux-static-x86-64.tar.xz" "7da60261909ab7e6fc2f0c0c1d484985f17710151e1c94e8229559eaa23cd611"
+tar xf postgrest-v12.2.8-linux-static-x86-64.tar.xz || error_exit "Failed to extract PostgREST archive"
+mv postgrest /usr/bin/ || error_exit "Failed to move postgrest to /usr/bin"
 
 cd /HAfAH/scripts
-./setup_postgres.sh --host=127.0.0.1
-./generate_version_sql.bash ..
-./install_app.sh --host=127.0.0.1
+./setup_postgres.sh --host=127.0.0.1 || error_exit "Failed to run setup_postgres.sh"
+./generate_version_sql.bash .. || error_exit "Failed to generate version SQL"
+./install_app.sh --host=127.0.0.1 || error_exit "Failed to install HAfAH app"
 
 
 cat << 'EOF' > postgrest.conf
@@ -211,13 +253,14 @@ db-root-spec = "home"
 server-port = 3000
 EOF
 
-pm2 start "postgrest postgrest.conf" --name hafah
+pm2 start "postgrest postgrest.conf" --name hafah || error_exit "Failed to start PostgREST with pm2"
 
 cd /
-apt install cargo -y
-git clone https://gitlab.syncad.com/hive/drone.git
+apt install cargo -y || error_exit "Failed to install cargo"
+git clone https://gitlab.syncad.com/hive/drone.git || error_exit "Failed to clone drone repository"
 cd drone
-cargo build --release
+git checkout efa51aa744888380fabe65f86b36983ac3cf79b8
+cargo build --release || error_exit "Failed to build drone"
 
 
 cat << 'EOF' > config.yaml
@@ -318,12 +361,12 @@ equivalent_methods:
 
 EOF
 
-pm2 start "./target/release/drone" --name drone
+pm2 start "./target/release/drone" --name drone || error_exit "Failed to start drone with pm2"
 
 cd /
-git clone https://gitlab.syncad.com/hive/mesh-api.git
+git clone https://gitlab.syncad.com/hive/mesh-api.git || error_exit "Failed to clone mesh-api repository"
 cd mesh-api
-npm i
-pm2 start "src/app.js" --name mesh
+npm i || error_exit "Failed to install mesh-api dependencies"
+pm2 start "src/app.js" --name mesh || error_exit "Failed to start mesh-api with pm2"
 
 
