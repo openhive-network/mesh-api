@@ -83,7 +83,7 @@ apt install software-properties-common -y
 
 git clone https://gitlab.syncad.com/hive/HAfAH.git || error_exit "Failed to clone HAfAH repository"
 cd HAfAH/
-git checkout 1.27.12rc2 || error_exit "Failed to checkout HAfAH version 1.27.12rc2"
+git checkout 1.28.5 || error_exit "Failed to checkout HAfAH version 1.28.5"
 git submodule update --init --recursive || error_exit "Failed to update HAfAH submodules"
 
 add-apt-repository universe -y
