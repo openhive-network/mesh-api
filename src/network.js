@@ -258,8 +258,8 @@ router.post('/options', async function(req, res) {
                     },
                     {
                         "code": 11,
-                        "message": "Block not found",
-                        "retriable": true
+                        "message": "Invalid request",
+                        "retriable": false
                     },
                     {
                         "code": 12,

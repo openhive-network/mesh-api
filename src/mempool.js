@@ -10,7 +10,7 @@ router.post('/', urlencodedParser, async function(req,res) {
         {
             "code": 12,
             "message": "Unsupported query",
-            "description": "This blockchain is account based and does not have UXTOs",
+            "description": "This blockchain is account based and does not have UTXOs",
             "retriable": false,
             "details": null
         }
@@ -23,7 +23,7 @@ router.post('/transaction', urlencodedParser, async function(req,res) {
         {
             "code": 12,
             "message": "Unsupported query",
-            "description": "This blockchain is account based and does not have UXTOs",
+            "description": "This blockchain is account based and does not have UTXOs",
             "retriable": false,
             "details": null
         }
