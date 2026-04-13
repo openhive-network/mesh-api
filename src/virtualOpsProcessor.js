@@ -223,8 +223,7 @@ function processEscrowRejectedOperation(vop, transactionsResult, startOpIndex) {
 
         // Add fee to HIVE amount if fee is in HIVE
         if (feeSymbol === "HIVE" && feeValue !== "0") {
-            // Convert to numbers, add, then back to string
-            const totalValue = (parseFloat(hiveValue) + parseFloat(feeValue)).toString();
+            const totalValue = (BigInt(hiveValue) + BigInt(feeValue)).toString();
             hiveValue = totalValue;
             feeValue = "0"; // Mark fee as processed
         }
@@ -249,7 +248,7 @@ function processEscrowRejectedOperation(vop, transactionsResult, startOpIndex) {
                 "to": to,
                 "agent": agent,
                 "escrow_id": escrow_id,
-                "includes_fee": feeSymbol === "HIVE" && parseFloat(hiveValue) > parseFloat(hive_amount.amount)
+                "includes_fee": feeSymbol === "HIVE" && BigInt(hiveValue) > BigInt(hive_amount.amount)
             }
         });
     }
@@ -260,8 +259,7 @@ function processEscrowRejectedOperation(vop, transactionsResult, startOpIndex) {
 
         // Add fee to HBD amount if fee is in HBD
         if (feeSymbol === "HBD" && feeValue !== "0") {
-            // Convert to numbers, add, then back to string
-            const totalValue = (parseFloat(hbdValue) + parseFloat(feeValue)).toString();
+            const totalValue = (BigInt(hbdValue) + BigInt(feeValue)).toString();
             hbdValue = totalValue;
             feeValue = "0"; // Mark fee as processed
         }
@@ -286,7 +284,7 @@ function processEscrowRejectedOperation(vop, transactionsResult, startOpIndex) {
                 "to": to,
                 "agent": agent,
                 "escrow_id": escrow_id,
-                "includes_fee": feeSymbol === "HBD" && parseFloat(hbdValue) > parseFloat(hbd_amount.amount)
+                "includes_fee": feeSymbol === "HBD" && BigInt(hbdValue) > BigInt(hbd_amount.amount)
             }
         });
     }
