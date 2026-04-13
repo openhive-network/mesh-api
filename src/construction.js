@@ -96,9 +96,13 @@ router.post('/preprocess', urlencodedParser, async function(req, res) {
             required_public_keys
         };
 
-        // If we have additional metadata, include it
-        if (metadata) {
-            Object.assign(options, metadata);
+        // If we have additional metadata, include it (filter unsafe keys)
+        if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+            for (const key of Object.keys(metadata)) {
+                if (key !== '__proto__' && key !== 'constructor' && key !== 'prototype') {
+                    options[key] = metadata[key];
+                }
+            }
         }
 
         res.json({
@@ -318,7 +322,9 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
                 });
             }
 
-            if (Math.abs(parseFloat(sendOp.amount.value)) !== parseFloat(receiveOp.amount.value)) {
+            const sendAbsValue = sendOp.amount.value.toString().replace(/^-/, '');
+            const recvValue = receiveOp.amount.value.toString();
+            if (sendAbsValue !== recvValue) {
                 return res.status(400).json({
                     code: 9,
                     message: "Invalid operations",
@@ -327,9 +333,18 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
                 });
             }
 
-            // Use the new amount format
-            // Extract the numeric value and convert to string
-            const amountValue = parseFloat(receiveOp.amount.value).toFixed(3);
+            // Convert amount to NAI integer format using string manipulation (no floating point)
+            const rawValue = receiveOp.amount.value.toString();
+            const dotIdx = rawValue.indexOf('.');
+            let amountInteger;
+            if (dotIdx === -1) {
+                // Integer input like "5" → "5000" (multiply by 10^precision)
+                amountInteger = rawValue + '000';
+            } else {
+                const intPart = rawValue.slice(0, dotIdx);
+                const fracPart = rawValue.slice(dotIdx + 1).padEnd(3, '0').slice(0, 3);
+                amountInteger = intPart + fracPart;
+            }
 
             // Determine NAI based on currency symbol
             let nai = "@@000000021"; // Default for HIVE
@@ -351,7 +366,7 @@ router.post('/payloads', urlencodedParser, async function(req, res) {
                 from: sendOp.account.address,
                 to: receiveOp.account.address,
                 amount: {
-                    amount: amountValue.replace('.', ''), // Remove decimal point for amount value
+                    amount: amountInteger,
                     precision: 3,
                     nai: nai
                 },
